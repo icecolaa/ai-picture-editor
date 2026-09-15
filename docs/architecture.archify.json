@@ -1,0 +1,368 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AI 图片编辑器 · 高层系统架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "architecture.html",
+    "repository": {
+      "url": "https://github.com/icecolaa/ai-picture-editor",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "20da5b207519886303b4b2668ed3be98ab6123c9"
+    },
+    "views": [
+      {
+        "id": "main-path",
+        "label": "一句话修图主路径",
+        "focus": [
+          "editor",
+          "api",
+          "agent",
+          "redis",
+          "worker",
+          "dashscope"
+        ],
+        "note": "从一句话指令到 AI 规划、异步执行再到 SSE 回传的完整闭环。"
+      },
+      {
+        "id": "storage",
+        "label": "存储与状态",
+        "focus": [
+          "api",
+          "postgres",
+          "minio",
+          "worker"
+        ],
+        "note": "运行记录、图层 JSONB 与结果图片的归属位置。"
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 5,
+    "cellW": 190,
+    "cellH": 110,
+    "gapX": 80,
+    "gapY": 68
+  },
+  "components": [
+    {
+      "id": "editor",
+      "type": "frontend",
+      "label": "React 编辑器",
+      "sublabel": "React 19 · react-konva 画布",
+      "row": 1,
+      "col": 0,
+      "sources": [
+        {
+          "path": "frontend/src/pages/EditorPage.tsx",
+          "label": "编辑器页面"
+        },
+        {
+          "path": "frontend/src/api/runs.ts",
+          "label": "运行 API 客户端"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI 应用",
+      "sublabel": "uvicorn :7302 · REST + SSE",
+      "tag": "JWT 鉴权",
+      "row": 1,
+      "col": 1,
+      "sources": [
+        {
+          "path": "backend/app/main.py",
+          "label": "应用入口"
+        },
+        {
+          "path": "backend/app/routers/runs.py",
+          "label": "运行路由"
+        },
+        {
+          "path": "backend/app/routers/events.py",
+          "label": "SSE 路由"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "LangGraph Agent",
+      "sublabel": "plan → verify 两步编排",
+      "row": 0,
+      "col": 1,
+      "sources": [
+        {
+          "path": "backend/app/agent/graph.py",
+          "label": "状态图定义"
+        },
+        {
+          "path": "backend/app/agent/llm.py",
+          "label": "规划模型接入"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "messagebus",
+      "label": "Redis 7",
+      "sublabel": "arq 队列 · Pub/Sub 进度",
+      "row": 1,
+      "col": 2,
+      "sources": [
+        {
+          "path": "backend/app/queue.py",
+          "label": "arq 入队"
+        },
+        {
+          "path": "backend/app/events.py",
+          "label": "进度发布订阅"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "arq Worker",
+      "sublabel": "21 种编辑工具 · 本地 CV 模型",
+      "row": 1,
+      "col": 3,
+      "sources": [
+        {
+          "path": "backend/app/worker.py",
+          "label": "Worker 设置"
+        },
+        {
+          "path": "backend/app/tasks/tools.py",
+          "label": "工具任务"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "dashscope",
+      "type": "external",
+      "label": "阿里云百炼 DashScope",
+      "sublabel": "qwen-plus · qwen-image 系列",
+      "row": 0,
+      "col": 4,
+      "sources": [
+        {
+          "path": "backend/app/providers/dashscope.py",
+          "label": "供应商实现"
+        },
+        {
+          "path": "backend/app/config.py",
+          "label": "模型与密钥配置"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL 17",
+      "sublabel": "用户 · 运行 · 图层 JSONB",
+      "row": 2,
+      "col": 1,
+      "sources": [
+        {
+          "path": "backend/app/db.py",
+          "label": "数据库会话"
+        },
+        {
+          "path": "backend/app/models/edit_session.py",
+          "label": "会话与图层模型"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "minio",
+      "type": "cloud",
+      "label": "MinIO",
+      "sublabel": "S3 对象存储 · 图片资产",
+      "row": 2,
+      "col": 3,
+      "sources": [
+        {
+          "path": "backend/app/storage.py",
+          "label": "S3 读写"
+        }
+      ],
+      "size": [
+        190,
+        68
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "用户域 · 浏览器",
+      "wraps": [
+        "editor"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "后端信任域 · docker compose 内网",
+      "wraps": [
+        "api",
+        "agent",
+        "redis",
+        "worker",
+        "postgres",
+        "minio"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "外部 AI 服务",
+      "wraps": [
+        "dashscope"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "editor-to-api",
+      "from": "editor",
+      "to": "api",
+      "label": "一句话指令",
+      "variant": "emphasis",
+      "labelDy": -14
+    },
+    {
+      "id": "api-to-editor",
+      "from": "api",
+      "to": "editor",
+      "label": "SSE 进度流",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-to-agent",
+      "from": "api",
+      "to": "agent",
+      "label": "LangGraph 生成计划",
+      "variant": "emphasis"
+    },
+    {
+      "id": "agent-to-dashscope",
+      "from": "agent",
+      "to": "dashscope",
+      "label": "qwen-plus"
+    },
+    {
+      "id": "api-to-redis",
+      "from": "api",
+      "to": "redis",
+      "label": "arq 入队",
+      "variant": "emphasis"
+    },
+    {
+      "id": "redis-to-worker",
+      "from": "redis",
+      "to": "worker",
+      "label": "消费工具任务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "worker-to-dashscope",
+      "from": "worker",
+      "to": "dashscope",
+      "label": "qwen-image",
+      "variant": "emphasis"
+    },
+    {
+      "id": "worker-to-redis",
+      "from": "worker",
+      "to": "redis",
+      "label": "进度发布",
+      "variant": "emphasis",
+      "labelDy": -14
+    },
+    {
+      "id": "worker-to-minio",
+      "from": "worker",
+      "to": "minio",
+      "label": "结果图写入",
+      "labelDy": 24
+    },
+    {
+      "id": "api-to-postgres",
+      "from": "api",
+      "to": "postgres",
+      "label": "运行记录 · 图层 JSONB",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "请求与回程",
+      "items": [
+        "POST /generations 建立运行，202 返回 run_id",
+        "GET /events/runs/{id} 以 SSE 实时推送进度",
+        "JWT 登录鉴权：routers/auth.py + security.py"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Agent 与工具",
+      "items": [
+        "LangGraph 仅 plan、verify 两个节点，planner 用 qwen-plus",
+        "UI 工具栏与 Agent 共用同一套 21 种工具注册表",
+        "重计算经 arq 队列异步执行，不阻塞 API"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "执行与外部依赖",
+      "items": [
+        "DashScope：qwen-image-3.0-pro 文生图，qwen-image-edit-max 局部编辑",
+        "本地 CV：rembg(u2net)、SAM 点选、OCR，缓存于 cv_models 卷",
+        "providers 层可切换 mock / dashscope，便于离线开发"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "存储与部署",
+      "items": [
+        "PostgreSQL：用户、运行与图层结构（JSONB 持久化）",
+        "MinIO：S3 协议存图，公开端点 :7313 供前端直读",
+        "app 与 worker 仅在 docker compose --profile deploy 启动"
+      ]
+    }
+  ]
+}
